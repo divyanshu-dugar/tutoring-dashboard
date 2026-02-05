@@ -92,7 +92,7 @@ export default function ParentStudentPage() {
               {latestSession.sessionNotes || "—"}
             </p> */}
             <p>
-              <span className="font-medium">Parent Notes:</span>{" "}
+              <span className="font-medium">Session Notes:</span>{" "}
               {latestSession.parentNotes || "—"}
             </p>
             <p>
@@ -122,12 +122,12 @@ export default function ParentStudentPage() {
               </summary>
 
               <div className="mt-3 space-y-2 text-sm">
-                <p>
+                {/* <p>
                   <span className="font-medium">Teacher Notes:</span>{" "}
                   {session.sessionNotes || "—"}
-                </p>
+                </p> */}
                 <p>
-                  <span className="font-medium">Parent Notes:</span>{" "}
+                  <span className="font-medium">Session Notes:</span>{" "}
                   {session.parentNotes || "—"}
                 </p>
                 <p>
