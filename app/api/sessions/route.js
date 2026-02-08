@@ -158,3 +158,52 @@ export async function PATCH(req) {
     );
   }
 }
+/**
+ * DELETE
+ * Delete a session (teacher only, ownership enforced)
+ */
+export async function DELETE(req) {
+  try {
+    await connectDB();
+
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "teacher") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const teacherId = session.user.id;
+    const body = await req.json();
+    const { sessionId } = body;
+
+    if (!sessionId || !mongoose.Types.ObjectId.isValid(sessionId)) {
+      return NextResponse.json(
+        { error: "Valid sessionId is required" },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await Session.findOneAndDelete({
+      _id: sessionId,
+      teacher: teacherId, // 🔒 ownership check
+    });
+
+    if (!deleted) {
+      return NextResponse.json(
+        { error: "Session not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Session deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting session:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

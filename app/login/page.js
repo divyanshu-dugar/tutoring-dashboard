@@ -1,24 +1,50 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
-    await signIn("credentials", {
-      email,
-      password,
-      callbackUrl: "/",
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (!result?.ok) {
+        setError("Invalid email or password");
+        setLoading(false);
+        return;
+      }
+
+      // Fetch user session to determine role
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
+
+      if (session?.user?.role === "teacher") {
+        router.push("/teacher");
+      } else if (session?.user?.role === "parent") {
+        router.push("/parent");
+      } else {
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An error occurred. Please try again.");
+      setLoading(false);
+    }
   }
 
   return (
@@ -35,6 +61,12 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
@@ -47,7 +79,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black"
+                className="w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-black focus:ring-black focus:ring-1"
               />
             </div>
 
@@ -62,7 +94,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black"
+                className="w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-black focus:ring-black focus:ring-1"
               />
             </div>
 

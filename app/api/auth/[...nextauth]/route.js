@@ -97,6 +97,15 @@ export const authOptions = {
       }
       return session;
     },
+
+    async redirect({ url, baseUrl }) {
+      // If it's a relative URL, let it through
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // Otherwise, return to base URL
+      return baseUrl;
+    },
   },
 
   pages: {

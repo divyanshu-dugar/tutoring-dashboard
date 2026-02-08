@@ -8,6 +8,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { connectDB } from "@/lib/db";
+import Student from "@/models/Student";
 
 export default async function ParentPage() {
   // Fetch active session on the server
@@ -17,22 +19,21 @@ export default async function ParentPage() {
   if (!session) redirect("/login");
   if (session.user.role !== "parent") redirect("/");
 
-  // Resolve API base URL for server-side fetch
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-
   let students = [];
 
   try {
-    // Fetch students associated with the parent
-    const res = await fetch(
-      `${baseUrl}/api/students?role=parent&userId=${session.user.id}`,
-      { cache: "no-store" }
-    );
+    await connectDB();
 
-    if (!res.ok) throw new Error("Failed to fetch students");
+    // Fetch students associated with the parent directly from database
+    const rawStudents = await Student.find({ parent: session.user.id })
+      .populate("parent", "name email")
+      .populate("teacher", "name email")
+      .lean();
 
-    students = await res.json();
-  } catch {
+    // Convert to plain JSON to avoid serialization errors
+    students = JSON.parse(JSON.stringify(rawStudents));
+  } catch (error) {
+    console.error("Error fetching students:", error);
     // Graceful fallback for API failure
     return (
       <section className="p-6">
