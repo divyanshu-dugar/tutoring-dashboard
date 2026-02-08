@@ -2,6 +2,8 @@
 
 /**
  * Teacher Student Page
+ * - View student details and parent
+ * - Change parent assignment
  * - View session history
  * - Create new sessions (with date, session notes, parent notes)
  * - Edit existing sessions inline
@@ -9,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function TeacherStudentPage() {
   const { id: studentId } = useParams();
@@ -16,8 +19,12 @@ export default function TeacherStudentPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  const [student, setStudent] = useState(null);
+  const [parents, setParents] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingParents, setLoadingParents] = useState(false);
+  const [updatingParent, setUpdatingParent] = useState(false);
 
   // Create form state
   const [date, setDate] = useState(today);
@@ -29,17 +36,65 @@ export default function TeacherStudentPage() {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
-  // Load sessions
+  // Parent state
+  const [selectedParentId, setSelectedParentId] = useState("");
+
+  // Load student, parents, and sessions
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/sessions?studentId=${studentId}`);
-      const data = await res.json();
-      setSessions(data);
-      setLoading(false);
+      try {
+        // Load student details
+        const studentRes = await fetch(`/api/students/${studentId}`);
+        if (studentRes.ok) {
+          const studentData = await studentRes.json();
+          setStudent(studentData);
+          setSelectedParentId(studentData.parent?._id || "");
+        }
+
+        // Load parents
+        const parentsRes = await fetch("/api/parents");
+        if (parentsRes.ok) {
+          const parentsData = await parentsRes.json();
+          setParents(parentsData);
+        }
+
+        // Load sessions
+        const sessionsRes = await fetch(`/api/sessions?studentId=${studentId}`);
+        const sessionsData = await sessionsRes.ok ? await sessionsRes.json() : [];
+        setSessions(sessionsData);
+      } catch (err) {
+        console.error("Error loading data:", err);
+      } finally {
+        setLoading(false);
+      }
     }
 
     if (studentId) load();
   }, [studentId]);
+
+  // Update parent assignment
+  async function handleUpdateParent(e) {
+    e.preventDefault();
+    setUpdatingParent(true);
+
+    try {
+      const res = await fetch(`/api/students/${studentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentId: selectedParentId || null }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update parent");
+
+      const updatedStudent = await res.json();
+      setStudent(updatedStudent);
+    } catch (err) {
+      console.error(err);
+      alert("Error updating parent");
+    } finally {
+      setUpdatingParent(false);
+    }
+  }
 
   // Create session
   async function handleCreate(e) {
@@ -106,10 +161,64 @@ export default function TeacherStudentPage() {
         onClick={() => router.back()}
         className="mb-6 text-sm text-blue-600 hover:underline"
       >
-        ← Back to students
+        ← Back
       </button>
 
-      <h2 className="text-2xl font-semibold mb-6">Student Sessions</h2>
+      {student && (
+        <div className="mb-8 border rounded-xl bg-white p-5">
+          <h1 className="text-2xl font-semibold mb-4">{student.name}</h1>
+
+          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+            <div>
+              <p className="font-medium text-gray-700">Grade</p>
+              <p className="text-gray-600">{student.grade || "—"}</p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">School</p>
+              <p className="text-gray-600">{student.school || "—"}</p>
+            </div>
+          </div>
+
+          {/* Parent Assignment Section */}
+          <form onSubmit={handleUpdateParent} className="space-y-3 pt-4 border-t">
+            <label className="block">
+              <p className="font-medium text-gray-700 text-sm mb-2">Assigned Parent</p>
+              <select
+                value={selectedParentId}
+                onChange={(e) => setSelectedParentId(e.target.value)}
+                className="border rounded-md p-2 w-full text-sm"
+              >
+                <option value="">No parent assigned</option>
+                {parents.map((parent) => (
+                  <option key={parent._id} value={parent._id}>
+                    {parent.name} ({parent.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={updatingParent}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
+              >
+                {updatingParent ? "Updating…" : "Update Parent"}
+              </button>
+              {student.parent && (
+                <Link
+                  href={`/teacher/parent/${student.parent._id}`}
+                  className="text-blue-600 text-sm hover:underline py-2"
+                >
+                  View Parent
+                </Link>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
+
+      <h2 className="text-2xl font-semibold mb-6">Sessions</h2>
 
       {/* Create Session */}
       <form

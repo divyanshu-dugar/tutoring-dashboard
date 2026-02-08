@@ -8,6 +8,8 @@ import { connectDB } from "@/lib/db";
 import Student from "@/models/Student";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(req) {
   try {
@@ -65,6 +67,66 @@ export async function GET(req) {
 
     return NextResponse.json(
       { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req) {
+  try {
+    await connectDB();
+
+    // Get teacher from session
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      console.error("No session found");
+      return NextResponse.json({ error: "Unauthorized - No session" }, { status: 401 });
+    }
+    
+    if (session.user.role !== "teacher") {
+      console.error("User role is not teacher:", session.user.role);
+      return NextResponse.json({ error: "Unauthorized - Not a teacher" }, { status: 401 });
+    }
+
+    const { name, grade, school, subjects, parentId } = await req.json();
+
+    if (!name) {
+      return NextResponse.json({ error: "Student name required" }, { status: 400 });
+    }
+
+    // If parentId is provided, validate it
+    let validParentId = null;
+    if (parentId) {
+      if (!mongoose.Types.ObjectId.isValid(parentId)) {
+        return NextResponse.json({ error: "Invalid parentId" }, { status: 400 });
+      }
+      validParentId = new mongoose.Types.ObjectId(parentId);
+    }
+
+    const student = await Student.create({
+      name,
+      grade: grade || "",
+      school: school || "",
+      subjects: subjects || [],
+      parent: validParentId || null,
+      teacher: new mongoose.Types.ObjectId(session.user.id),
+    });
+
+    // Fetch the populated student
+    const populatedStudent = await Student.findById(student._id)
+      .populate("parent", "name email")
+      .populate("teacher", "name email")
+      .lean();
+
+    // Convert to plain JSON for serialization
+    const result = JSON.parse(JSON.stringify(populatedStudent));
+
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    console.error("Error in POST /api/students:", error.message, error.stack);
+    return NextResponse.json(
+      { error: "Internal server error", details: error.message },
       { status: 500 }
     );
   }
