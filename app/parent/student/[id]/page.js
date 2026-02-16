@@ -82,7 +82,7 @@ export default function ParentStudentPage() {
         <div className="rounded-xl border bg-white p-5 mb-8">
           <h3 className="font-medium mb-3">
             Last Session –{" "}
-            {new Date(latestSession.date).toLocaleDateString()}
+            {new Date(latestSession.date).toLocaleDateString('en-US', { timeZone: 'UTC' })}
           </h3>
 
           <div className="space-y-2 text-sm">
@@ -118,7 +118,7 @@ export default function ParentStudentPage() {
               className="rounded-lg border bg-white p-4"
             >
               <summary className="cursor-pointer font-medium text-sm">
-                {new Date(session.date).toLocaleDateString()}
+                {new Date(session.date).toLocaleDateString('en-US', { timeZone: 'UTC' })}
               </summary>
 
               <div className="mt-3 space-y-2 text-sm">

@@ -92,7 +92,7 @@ export async function POST(req) {
       sessionNotes,
       parentNotes,
       homework,
-      date: date ? new Date(date) : new Date(),
+      date: date ? new Date(date + 'T12:00:00Z') : new Date(),
     });
 
     return NextResponse.json(newSession, { status: 201 });
@@ -137,7 +137,7 @@ export async function PATCH(req) {
         sessionNotes,
         parentNotes,
         homework,
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(date + 'T12:00:00Z') : new Date(),
       },
       { new: true }
     ).lean();

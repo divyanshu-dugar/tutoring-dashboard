@@ -273,7 +273,7 @@ export default function TeacherStudentPage() {
           >
             <div className="flex justify-between mb-2">
               <p className="font-medium">
-                {new Date(s.date).toLocaleDateString()}
+                {new Date(s.date).toLocaleDateString('en-US', { timeZone: 'UTC' })}
               </p>
               {editingId !== s._id && (
                 <button
